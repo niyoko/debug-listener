@@ -1,0 +1,4 @@
+node_modules
+
+# Local configuration file
+/config/local.json
