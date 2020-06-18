@@ -1,31 +1,42 @@
 html
   head
     title= title
+    link(href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400;1,700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap", rel="stylesheet")
     style(type="text/css").
+      * {
+        font-family: 'Lato', sans-serif;
+      }
+
       .log-item {
         padding: 0.5rem;
         border-bottom: 1px solid gray;
       }
 
       .log-item.log-item-error {
-        color: red;
+        color: rgb(244, 67, 54);
       }
 
-      .log-item.log-item-error {
-        color: yellow;
+      .log-item.log-item-warning {
+        color: rgb(255, 152, 0);;
       }
 
       .log-item.log-item-info {
-        color: blue;
+        color: rgb(33, 150, 243);;
       }
 
       .log-item.log-item-trace {
-        color: green;
+        color: rgb(76, 175, 80);;
       }
 
       .log-item .log-item-inner {
-        max-height: 3rem;
+        max-height: 5rem;
         overflow: hidden;
+      }
+
+      pre {
+        font-family: 'Source Code Pro', monospace;
+        margin: 0;
+        padding: 0;
       }
   body
     h1= message
@@ -41,15 +52,26 @@ html
         });
 
         function renderItem(item) {
-          const {levelName, time, message} = item;
+          const {levelName, category, time, message} = item;
           const divItem = $('<div />');
           divItem.addClass('log-item');
           divItem.addClass('log-item-' + levelName);
 
           const divInner = $('<div />');
-          divInner.addClass('log-item-inner')
-          divInner.text(message);
+          divInner.addClass('log-item-inner');
 
+          const divMsg = $('<div />');
+          divMsg.addClass('log-item-message');
+          const preMsg = $('<pre />');
+          preMsg.text(message);
+          divMsg.append(preMsg);
+
+          const divCat = $('<div />');
+          divCat.addClass('log-item-category');
+          divCat.text(category);
+
+          divInner.append(divCat);
+          divInner.append(divMsg);
           divItem.append(divInner);
           return divItem;
         }
