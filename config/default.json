@@ -1,3 +1,4 @@
 {
-  "port": "44422"
+  "listenerPort": "44422",
+  "viewerPort": "8080"
 }

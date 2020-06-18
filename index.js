@@ -2,8 +2,10 @@
 
 const udp = require('dgram');
 const config = require('config');
-const chalk = require('chalk');
 const os = require('os');
+const express = require('express');
+const http = require('http');
+const WebSocket = require('ws');
 const isNil = require('lodash/isNil');
 const split = require('lodash/split');
 const join = require('lodash/join');
@@ -11,61 +13,67 @@ const dropWhile = require('lodash/dropWhile');
 const take = require('lodash/take');
 const diff = require('date-fns/differenceInSeconds');
 const parseIso = require('date-fns/parseISO');
-const format = require('date-fns/format');
 
 require('yargs')
-  .command(['listen', '$0'], 'Listen incoming debug message', {}, listen)
+  .command('$0', 'Listen incoming debug message', {}, execute)
   .help()
   .parse();
 
-function listen() {
+function execute() {
+  const {reportNewLog} = startViewer();
+  startListener({reportNewLog});
+}
+
+let prevTime = null;
+function startListener({reportNewLog}) {
   const server = udp.createSocket('udp4');
   server.on('error', error => {
     console.log(`Error: ${error}`);
     server.close();
   });
 
-  server.on('message', wrapTry(onMessage));
-  server.on('listening', () => {
-    const address = server.address();
-    const {port, family, ipaddr} = address;
+  server.on(
+    'message',
+    wrapTry(msg => {
+      const item = JSON.parse(msg.toString());
+      if (!isEnabled(item)) return;
 
-    console.log(`Server is listening at port ${port}`);
-    console.log(`Server ip: ${ipaddr}`);
-    console.log(`Server is IP4/IP6: ${family}`);
-  });
+      const {time} = item;
+      const tm = parseIso(time);
 
-  server.on('close', () => {
-    console.log('Socket is closed !');
-  });
+      if (isNil(prevTime) || diff(tm, prevTime) > 2) {
+      }
 
-  server.bind(config.get('port'));
+      prevTime = tm;
+
+      reportNewLog(item);
+    }),
+  );
+
+  server.bind(config.get('listenerPort'));
 }
 
-let prevTime = null;
-function onMessage(msg) {
-  const item = JSON.parse(msg.toString());
-  if (!isEnabled(item)) return;
+function startViewer() {
+  const server = express();
+  server.set('view engine', 'pug');
+  server.get('/', function(req, res) {
+    res.render('index', {title: 'Hey', message: 'Hello there!'});
+  });
 
-  const {time} = item;
-  const tm = parseIso(time);
+  const httpServer = http.createServer(server);
+  const wss = new WebSocket.Server({
+    server: httpServer,
+  });
 
-  if (isNil(prevTime) || diff(tm, prevTime) > 2) {
-    console.log('=====================');
-    console.log(format(tm, 'HH:mm:ss'));
-    console.log();
-  }
+  httpServer.listen(config.get('viewerPort'));
 
-  prevTime = tm;
-  renderItem(console.log, item);
-}
-
-function renderItem(display, item) {
-  const {category, message} = item;
-  const color = getColor(item);
-  display(formatTitle(color, category));
-  display(formatText(color, truncateMessage(message)));
-  display('');
+  return {
+    reportNewLog: item => {
+      for (const client of wss.clients) {
+        client.send(JSON.stringify(item));
+      }
+    },
+  };
 }
 
 function truncateMessage(message) {
@@ -79,31 +87,6 @@ function truncateMessage(message) {
 function isEnabled(logItem) {
   const {level} = logItem;
   return level <= 10;
-}
-
-function getColor(logItem) {
-  const {levelName} = logItem;
-  if (levelName === 'error') return 'red';
-  if (levelName === 'warning') return 'yellow';
-  if (levelName === 'info') return 'blue';
-  if (levelName === 'trace') return 'green';
-  return 'white';
-}
-
-function formatTitle(color, message) {
-  return chalk[color].underline(message);
-}
-
-function formatText(color, message) {
-  return chalk[color](message);
-}
-
-function bgColor(color) {
-  return 'bg' + capitalizeFirstLetter(color);
-}
-
-function capitalizeFirstLetter(string) {
-  return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
 function wrapTry(fn) {
