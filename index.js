@@ -2,15 +2,10 @@
 
 const udp = require('dgram');
 const config = require('config');
-const os = require('os');
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const isNil = require('lodash/isNil');
-const split = require('lodash/split');
-const join = require('lodash/join');
-const dropWhile = require('lodash/dropWhile');
-const take = require('lodash/take');
 const diff = require('date-fns/differenceInSeconds');
 const parseIso = require('date-fns/parseISO');
 
@@ -59,7 +54,7 @@ function startViewer() {
   const app = express();
   app.set('view engine', 'pug');
   app.get('/', function(req, res) {
-    res.render('index', {title: 'Hey', message: 'Hello there!'});
+    res.render('index');
   });
 
   app.use(express.static('public'));
@@ -78,14 +73,6 @@ function startViewer() {
       }
     },
   };
-}
-
-function truncateMessage(message) {
-  let lines = split(message, /\r\n|\r|\n/);
-  lines = dropWhile(lines, x => !x);
-  lines = take(lines, 4);
-
-  return join(lines, os.EOL);
 }
 
 function isEnabled(logItem) {

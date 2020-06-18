@@ -1,10 +1,19 @@
 (function() {
+  const maxLog = 500;
   const e = React.createElement;
   const initialLogs = [];
 
+  moment.locale('id');
+
   function logReducer(state, action) {
     if (action.type === 'append') {
-      return [...state, action.item];
+      const fromNew = Math.min(maxLog, action.items.length);
+      const fromOld = Math.min(maxLog - fromNew, state.length);
+
+      const itemFromOld = state.slice(state.length - fromOld);
+      const itemFromNew = action.items.slice(action.items.length - fromNew);
+
+      return [...itemFromOld, ...itemFromNew];
     }
 
     throw new Error();
@@ -20,6 +29,21 @@
 
     cats.sort();
     return cats;
+  }
+
+  function debounce(func, wait, immediate) {
+    let timeout;
+    return function(...args) {
+      const context = this;
+      const later = function() {
+        timeout = null;
+        if (!immediate) func.apply(context, args);
+      };
+      const callNow = immediate && !timeout;
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+      if (callNow) func.apply(context, args);
+    };
   }
 
   function matchState(category, filter) {
@@ -68,7 +92,17 @@
     return path;
   }
 
-  function CheckBox({category, filter, setFilter}) {
+  function getCatCount(items) {
+    const c = {};
+    for (const item of items) {
+      if (!c[item.category]) c[item.category] = 1;
+      else c[item.category]++;
+    }
+
+    return c;
+  }
+
+  function CheckBox({category, filter, setFilter, count}) {
     const m = matchState(category.key, filter.category);
     const checked = Boolean(m.exact || m.p2);
     const indeterminate = Boolean(!checked && m.p1);
@@ -109,7 +143,11 @@
           }
         },
       }),
-      e('label', {htmlFor: `cat-${category.key}`, key: 1}, category.label),
+      e(
+        'label',
+        {htmlFor: `cat-${category.key}`, key: 1},
+        category.label + (count ? ` (${count})` : ''),
+      ),
     ]);
   }
 
@@ -119,12 +157,16 @@
       return buildPath(cats);
     }, [items]);
 
+    const counts = React.useMemo(() => {
+      return getCatCount(items);
+    }, [items]);
+
     const appendItems = p => {
       const el1 = [];
       for (let i = 0; i < p.length; i++) {
         el1.push(
           e('div', {className: 'filter-checkbox-wrap', key: i}, [
-            e(CheckBox, {key: 0, category: p[i], filter, setFilter}),
+            e(CheckBox, {key: 0, category: p[i], filter, setFilter, count: counts[p[i].key]}),
             e(
               React.Fragment,
               {key: 1},
@@ -140,31 +182,40 @@
     return e('div', {className: 'log-filter'}, appendItems(pcats));
   }
 
-  function LogList({items, filter}) {
+  function LogList({items, filter, currentDate}) {
     const el = [];
-    for (let i = 0; i < items.length; i++) {
+    const len = items.length;
+
+    for (let i = len - 1; i >= 0; i--) {
       const item = items[i];
       const m = matchState(item.category, filter.category);
       if (!m.exact && !m.p2) continue;
 
-      el.push(e(LogItem, {item, key: i}));
+      el.push(e(LogItem, {item, key: i, currentDate}));
     }
 
     return e('div', {className: 'log-list'}, el);
   }
 
-  function LogItem({item}) {
-    const {levelName, message, category, stack} = item;
+  function LogItem({item, currentDate}) {
+    const {levelName, message, category, stack, time} = item;
+    const pTime = moment(time);
+    const sameDay = pTime.isSame(currentDate, 'day');
+    const fTime = pTime.format(sameDay ? 'HH:mm:ss' : 'YYYY-MM-DD HH:mm:ss');
+    const dur = `${fTime} (${moment.duration(pTime.diff(currentDate)).humanize(true)})`;
 
     const [expanded, setExpanded] = React.useState(false);
     return e(
       'div',
       {className: `log-item log-item-${levelName}`},
       e('div', {className: expanded ? 'log-item-inner expanded' : 'log-item-inner'}, [
-        e('div', {className: 'log-item-category', key: 0}, category),
+        e('div', {className: 'log-item-header', key: 0}, [
+          e('div', {className: 'log-item-category', key: 0}, category),
+          e('div', {className: 'log-item-time', key: 1}, dur),
+        ]),
         e('div', {className: 'log-item-message', key: 1}, e('pre', {}, message)),
         stack
-          ? e('div', {className: 'log-item-message', key: 2}, e('pre', {}, stack.join('\n')))
+          ? e('div', {className: 'log-item-stack', key: 2}, e('pre', {}, stack.join('\n')))
           : null,
         e(
           'button',
@@ -183,15 +234,31 @@
   function App() {
     const [state, dispatch] = React.useReducer(logReducer, initialLogs);
     const [logFilter, setLogFilter] = React.useState({category: ['application']});
+    const [currentDate, setCurrentDate] = React.useState(new Date());
+
+    React.useEffect(function() {
+      setInterval(function() {
+        setCurrentDate(new Date());
+      }, 2500);
+    }, []);
 
     React.useEffect(function() {
       const ws = new WebSocket('ws://' + location.host + '/websocket');
-      ws.addEventListener('message', function(event) {
-        const item = JSON.parse(event.data);
+      let tmpItem = [];
+
+      const evt = debounce(function() {
+        const tm = tmpItem;
+        tmpItem = [];
         dispatch({
           type: 'append',
-          item: item,
+          items: tm,
         });
+      }, 500);
+
+      ws.addEventListener('message', function(event) {
+        const item = JSON.parse(event.data);
+        tmpItem.push(item);
+        evt();
       });
 
       return function() {
@@ -208,7 +275,7 @@
       e(
         'div',
         {className: 'app-body', key: 'body'},
-        e(LogList, {key: 'list', items: state, filter: logFilter}),
+        e(LogList, {key: 'list', items: state, filter: logFilter, currentDate}),
       ),
     ]);
   }
