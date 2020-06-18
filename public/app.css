@@ -1,0 +1,92 @@
+* {
+  font-family: 'Lato', sans-serif;
+}
+
+.app {
+  display: flex;
+  flex-direction: row;
+}
+
+.app-header {
+  position: fixed;
+}
+
+.app-body {
+  position: fixed;
+  left: 23rem;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+
+.app-body .log-list {
+  height: 100%;
+  overflow-y: scroll;
+}
+
+.log-item {
+  padding: 0.5rem;
+  border-bottom: 1px solid lightgray;
+}
+
+.log-item.log-item-error {
+  color: rgb(244, 67, 54);
+}
+
+.log-item.log-item-warning {
+  color: rgb(255, 152, 0);
+}
+
+.log-item.log-item-info {
+  color: rgb(33, 150, 243);
+}
+
+.log-item.log-item-trace {
+  color: rgb(76, 175, 80);
+}
+
+.log-item .log-item-inner {
+  max-height: 5rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.log-item .log-item-inner button {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.log-item .log-item-inner.expanded {
+  max-height: 100rem;
+}
+
+.log-filter {
+  margin-left: -1em;
+  margin-right: 1rem;
+  padding-right: 1rem;
+  border-right: 1px dashed black;
+}
+
+.log-categories {
+  margin-left: 0.5em;
+  padding-left: 0.5em;
+  border-left: 1px dotted black;
+}
+
+.filter-checkbox-wrap {
+  width: 20rem;
+  margin-right: 1rem;
+  margin-bottom: 0.3rem;
+  margin-top: 0.3rem;
+}
+
+pre {
+  font-family: 'Source Code Pro', monospace;
+  margin: 0;
+  padding: 0;
+}
+
+label {
+  user-select: none;
+}

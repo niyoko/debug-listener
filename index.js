@@ -25,6 +25,7 @@ function execute() {
 }
 
 let prevTime = null;
+let cluster = 0;
 function startListener({reportNewLog}) {
   const server = udp.createSocket('udp4');
   server.on('error', error => {
@@ -41,12 +42,13 @@ function startListener({reportNewLog}) {
       const {time} = item;
       const tm = parseIso(time);
 
-      if (isNil(prevTime) || diff(tm, prevTime) > 2) {
+      if (isNil(prevTime) || diff(tm, prevTime) > 5) {
+        cluster++;
       }
 
       prevTime = tm;
 
-      reportNewLog(item);
+      reportNewLog({...item, cluster});
     }),
   );
 
@@ -54,13 +56,15 @@ function startListener({reportNewLog}) {
 }
 
 function startViewer() {
-  const server = express();
-  server.set('view engine', 'pug');
-  server.get('/', function(req, res) {
+  const app = express();
+  app.set('view engine', 'pug');
+  app.get('/', function(req, res) {
     res.render('index', {title: 'Hey', message: 'Hello there!'});
   });
 
-  const httpServer = http.createServer(server);
+  app.use(express.static('public'));
+
+  const httpServer = http.createServer(app);
   const wss = new WebSocket.Server({
     server: httpServer,
   });

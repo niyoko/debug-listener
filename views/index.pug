@@ -1,78 +1,11 @@
 html
   head
     title= title
-    link(href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400;1,700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap", rel="stylesheet")
-    style(type="text/css").
-      * {
-        font-family: 'Lato', sans-serif;
-      }
-
-      .log-item {
-        padding: 0.5rem;
-        border-bottom: 1px solid gray;
-      }
-
-      .log-item.log-item-error {
-        color: rgb(244, 67, 54);
-      }
-
-      .log-item.log-item-warning {
-        color: rgb(255, 152, 0);;
-      }
-
-      .log-item.log-item-info {
-        color: rgb(33, 150, 243);;
-      }
-
-      .log-item.log-item-trace {
-        color: rgb(76, 175, 80);;
-      }
-
-      .log-item .log-item-inner {
-        max-height: 5rem;
-        overflow: hidden;
-      }
-
-      pre {
-        font-family: 'Source Code Pro', monospace;
-        margin: 0;
-        padding: 0;
-      }
+    link(href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400;1,700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet")
+    link(href="/app.css" rel="stylesheet")
   body
-    h1= message
-    div#logs
+    div#app
 
-    script(src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js")
-    script(type="text/javascript").
-      (function() {
-        const ws = new WebSocket('ws://' + location.host + '/websocket');
-        ws.addEventListener('message', function(event) {
-          const item = JSON.parse(event.data);
-          $('#logs').append(renderItem(item));
-        });
-
-        function renderItem(item) {
-          const {levelName, category, time, message} = item;
-          const divItem = $('<div />');
-          divItem.addClass('log-item');
-          divItem.addClass('log-item-' + levelName);
-
-          const divInner = $('<div />');
-          divInner.addClass('log-item-inner');
-
-          const divMsg = $('<div />');
-          divMsg.addClass('log-item-message');
-          const preMsg = $('<pre />');
-          preMsg.text(message);
-          divMsg.append(preMsg);
-
-          const divCat = $('<div />');
-          divCat.addClass('log-item-category');
-          divCat.text(category);
-
-          divInner.append(divCat);
-          divInner.append(divMsg);
-          divItem.append(divInner);
-          return divItem;
-        }
-      })();
+    script(src="https://unpkg.com/react@16/umd/react.development.js")
+    script(src="https://unpkg.com/react-dom@16/umd/react-dom.development.js")
+    script(src="/app.js")
